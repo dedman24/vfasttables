@@ -1,14 +1,17 @@
-
-#include "stdio.h"
-#include "stdint.h"
 #include "../ctx/ctx.h"
 #include "../computation/hash.h"
 
+// stdlib includes.
+#include "stdio.h"
+#include "stddef.h"
+#include "stdint.h"
+
 static void vfasttables_out_printenum(FILE* out, char* const restrict enumname, const bool prefixenum, char* const restrict pfix, uint32_t* const restrict associated_values, struct vfasttables_parseinput_s* s, size_t* const restrict indices, const size_t indexcnt){
     fputs(
-        "#include \"string.h\"\n"
+        "// stdlib includes.\n"
         "#include \"stddef.h\"\n"
-        "#include \"stdint.h\"\n\n"
+        "#include \"stdint.h\"\n"
+        "#include \"string.h\"\n\n"
         "typedef enum{\n",
         out
     );
@@ -31,7 +34,7 @@ static void vfasttables_out_printenum(FILE* out, char* const restrict enumname, 
 
     fprintf(out, "    %s_NONE = %lu\n", pfix, s->incnt);
 
-    fprintf(out, "} %s;\n", enumname);
+    fprintf(out, "} %s;\n\n", enumname);
 }
 
 void vfasttables_out_printhash(FILE* out, uint32_t* const restrict associated_values, const uint32_t incnt, char* const restrict enumname, char* const restrict associated_type, char* const restrict pfix, size_t* const restrict indices, const size_t indexcnt){
@@ -43,11 +46,11 @@ void vfasttables_out_printhash(FILE* out, uint32_t* const restrict associated_va
         enumname, pfix, associated_type
     );
 
-    for(int i = 0; i < vfasttables_supportedchars/16; i++){
+    for(size_t i = 0; i < vfasttables_supportedchars/16; i++){
         fputs("        ", out);
-        for(int j = 0; j < 16; j++){
-            fprintf(out, "%u", associated_values[i*16 + j]);
-            if(i != (vfasttables_supportedchars/16) - 1 || j != 15) fputc(',', out);
+        for(size_t j = 0; j < 16; j++){
+            fprintf(out, "0x%02x", associated_values[i*16 + j]);
+            if(i != (vfasttables_supportedchars/16) - 1 || j != 15) fputc(', ', out);
         }
         fputs("\n", out);
     }
@@ -67,14 +70,14 @@ void vfasttables_out_printhash(FILE* out, uint32_t* const restrict associated_va
     fprintf(out,
         "\n"
         "    };\n"
-        "    %s hash = len;\n"
+        "    %s hash = associated_values[len];\n"
         "    for(size_t i = 0; i < sizeof(indices)/sizeof(*indices); i++){\n"
         "        hash += str[associated_values[indices[i]] %% len];\n"
         "    }\n"
         "    hash %%= %d;\n"
-        "    return hash;\n"
+        "    return (%s)hash;\n"
         "}\n\n",
-        associated_type, incnt
+        associated_type, incnt, enumname
     );
 }
 
@@ -82,8 +85,15 @@ void vfasttables_out_printtable(FILE* out, struct vfasttables_parseinput_s* s){
     fputs("    char* table[] = {\n", out);
 
     for(size_t i = 0; i < s->incnt; i++){
-        fputs("        \"", out);
-        fputs(s->instr[i], out);
+        fputs("        [", out);
+        fputs(s->intok[i], out);
+        fputs("] = ", out);
+        for(size_t j = 0; j < s->inlen[i]; j++){
+            const char c = s->instr[i][j];
+            if(c == '"' || c == '\\')
+                fputc('\\', out);                // we HAVE to pad with '\' or else the C code won't work.
+            fputc(c, out);
+        }
 
         if(i == s->incnt - 1) fputs("\"\n    };\n", out);
         else fputs("\",\n", out);
