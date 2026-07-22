@@ -1,15 +1,14 @@
-#ifndef vfasttables_included
-#define vfasttables_included
+#ifndef VFASTTABLES_H_INCLUDED
+#define VFASTTABLES_H_INCLUDED
 
-#include "stdbool.h"
-#include "stdio.h"
-
+#include "parse/parse.h"
+#include "output/writecode.h"
 #include "computation/indices.h"
 #include "computation/associated_values.h"
 
-#include "output/writecode.h"
-
-#include "parse/parse.h"
+// stdlib includes.
+#include "stdio.h"
+#include "stdbool.h"
 
 // 'vfasttables' is a tool to be used to generate hashtables quickly, using the same algorithm that 'gperf' does.
 // the end result is quicker than gperf's output, as vfasttables is specifically designed for the VERB programming language's tokeniser.
