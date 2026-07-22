@@ -9,7 +9,7 @@
 
 // definitions.
 #define vfasttables_supportedchars 128      // all 128 ascii characters are supported (even those from 00h to 1Fh)
-#define VFASTTABLES_VERSION_STRING "1.0.0"
+#define VFASTTABLES_VERSION_STRING "1.0.2"
 
 typedef enum{                               // add ctx options here.
     VFASTTABLES_OPT_NONE,
