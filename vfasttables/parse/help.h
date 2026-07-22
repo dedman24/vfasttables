@@ -1,8 +1,9 @@
+#include "../ctx/ctx.h"
 
+// stdlib includes.
 #include "stdio.h"
 #include "string.h"
 #include "stdbool.h"
-#include "../ctx/ctx.h"
 
 void vfasttables_print_version(){
     puts(
