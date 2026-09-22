@@ -8,8 +8,8 @@
 #include "stdbool.h"
 
 // definitions.
-#define vfasttables_supportedchars 128      // all 128 ascii characters are supported (even those from 00h to 1Fh)
-#define VFASTTABLES_VERSION_STRING "1.0.2"
+#define vfasttables_supportedchars 128      // all 128 ascii characters are supported (even those from 00h to 1Fh, which are 99% of the time used for length stuff).
+#define VFASTTABLES_VERSION_STRING "1.1.0"
 
 typedef enum{                               // add ctx options here.
     VFASTTABLES_OPT_NONE,
@@ -18,13 +18,14 @@ typedef enum{                               // add ctx options here.
 
 typedef struct{
     FILE* restrict src;                     // src file.
-    FILE* restrict dst;                     // dst file.
     char* restrict pfix;                    // prefix to add to all functions, 'vfasttables' as default prefix.
     char* restrict enumname;                // explicit name of enum _hash should return.
+    size_t cardinality;                     // number of entries to map to.
+    uint32_t increment;
     vfasttables_options_e options;
 } vfasttables_ctx;
 
-vfasttables_ctx* vfasttables_ctx_init(vfasttables_ctx* restrict ctx, char* const restrict srcPath, char* const restrict dstPath, char* restrict pfix, char* restrict enumname, const vfasttables_options_e options){
+vfasttables_ctx* vfasttables_ctx_init(vfasttables_ctx* restrict ctx, char* const restrict srcPath, char* restrict pfix, char* restrict enumname, const size_t cardinality, const uint32_t increment, const vfasttables_options_e options){
     if(!ctx){
         ctx = malloc(sizeof(*ctx));
         if(!ctx) return NULL;
@@ -32,9 +33,6 @@ vfasttables_ctx* vfasttables_ctx_init(vfasttables_ctx* restrict ctx, char* const
 
     ctx->src = fopen(srcPath, "r");
     if(!ctx->src){ free(ctx); return NULL; }
-
-    ctx->dst = fopen(dstPath, "w");
-    if(!ctx->dst){ free(ctx); return NULL; }
 // default prefix.
     if(!pfix) pfix = "vfasttables";
     ctx->pfix = pfix;
@@ -49,7 +47,8 @@ vfasttables_ctx* vfasttables_ctx_init(vfasttables_ctx* restrict ctx, char* const
         enumname = enumnamecopy;
     }
     ctx->enumname = enumname;
-
+    ctx->cardinality = cardinality;
+    ctx->increment = increment;
     ctx->options = options;
 
     return ctx;
@@ -57,7 +56,6 @@ vfasttables_ctx* vfasttables_ctx_init(vfasttables_ctx* restrict ctx, char* const
 
 void vfasttables_ctx_destroy(vfasttables_ctx* const restrict ctx, const bool freeIt){
     if(ctx->src) fclose(ctx->src);
-    if(ctx->dst) fclose(ctx->dst);
     free(ctx->enumname);
     if(freeIt) free(ctx);
 }
@@ -67,6 +65,8 @@ struct vfasttables_parseinput_s{
     char**  intok;
     size_t* inlen;
     size_t  incnt;
+    size_t  cardinality;
+    uint32_t increment;
     uint32_t mask;
 };
 

@@ -1,14 +1,15 @@
-#ifndef VFASTTABLES_H_INCLUDED
-#define VFASTTABLES_H_INCLUDED
+#ifndef vfasttables_included
+#define vfasttables_included
 
-#include "parse/parse.h"
-#include "output/writecode.h"
+#include "stdbool.h"
+#include "stdio.h"
+
 #include "computation/indices.h"
 #include "computation/associated_values.h"
 
-// stdlib includes.
-#include "stdio.h"
-#include "stdbool.h"
+#include "output/writecode.h"
+
+#include "parse/parse.h"
 
 // 'vfasttables' is a tool to be used to generate hashtables quickly, using the same algorithm that 'gperf' does.
 // the end result is quicker than gperf's output, as vfasttables is specifically designed for the VERB programming language's tokeniser.
@@ -32,13 +33,13 @@ void vfasttable(char* argv[], const int argc, const bool printInfo){
     size_t* indices = vfasttables_indices(&s, &indexcnt);
     indexcnt--;                                                 // done because vfasttables_indices considers 'size' to be an index while the rest of the program doesn't.
 #ifdef VFASTTABLES_DEBUG
-    printf("indexcnt %lu\n", indexcnt);                         // when summer ends & you still haven't had your 12 episode romcom anime IRL...
+    fprintf(stderr, "indexcnt %lu\n", indexcnt);                // when summer ends & you still haven't had your 12 episode romcom anime IRL...
     for(size_t i = 0; i < indexcnt; i++)
-        printf("indices[%lu] == %lu\n", i, indices[i]);
+        fprintf("indices[%lu] == %lu\n", i, indices[i]);
 #endif
 
     if(!indices){
-        puts("no indices.");
+        fputs("no indices.", stderr);
         vfasttables_parseinput_s_destroy(&s);
         vfasttables_ctx_destroy(ctx, true);
         return;
@@ -51,7 +52,7 @@ void vfasttable(char* argv[], const int argc, const bool printInfo){
         return;
     }
 
-    vfasttables_out_print(ctx->dst, ctx->pfix, associated_values, &s, ctx, indices, indexcnt);
+    vfasttables_out_print(ctx->pfix, associated_values, &s, ctx, indices, indexcnt);
 
     vfasttables_parseinput_s_destroy(&s);
 

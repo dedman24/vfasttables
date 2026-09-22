@@ -1,11 +1,11 @@
-#include "help.h"
-#include "../ctx/ctx.h"
 
-// stdlib includes.
 #include "stddef.h"
 #include "stdlib.h"
 #include "string.h"
 #include "stdbool.h"
+
+#include "help.h"
+#include "../ctx/ctx.h"
 
 // parses command-line input.
 // input:
@@ -21,29 +21,22 @@ static vfasttables_ctx* vfasttables_parseargs(char* argv[], const int argc){
         return NULL;
     }
 
-    if(vfasttables_check_arg(argv[1]))
+    if(vfasttables_check_arg(argv[0], argv[1]))
         return NULL;
 
     vfasttables_options_e opts = VFASTTABLES_OPT_NONE;
 
     char* const srcPath = argv[argc-1];
-    char* dstPath = NULL;
     char* pfix = NULL;
     char* enumname = NULL;
+    size_t cardinality = 0;
+    uint32_t increment = 1;
     for(int i = 0; i < argc; i++){
         if(strcmp(argv[i], "--prefixEnum") == 0) opts |= VFASTTABLES_OPT_PREFIX_ENUM;
 
-        else if(strcmp(argv[i], "-o") == 0){
-            if(argc - 2 < i){
-                puts("ERROR: no input files.");
-                return NULL;
-            }
-            else dstPath = argv[++i];
-        }
-
         else if(strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--Prefix") == 0){
             if(argc - 2 < i){
-                puts("ERROR: prefix specified but none present.");
+                fputs("ERROR: prefix specified but none present.\n", stderr);
                 return NULL;
             }
             else pfix = argv[++i];
@@ -51,17 +44,30 @@ static vfasttables_ctx* vfasttables_parseargs(char* argv[], const int argc){
 
         else if(strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--Enum") == 0){
             if(argc - 2 < i){
-                puts("ERROR: enum name specified but none present.");
+                fputs("ERROR: enum name specified but none present.\n", stderr);
                 return NULL;
             }
             else enumname = argv[++i];
         }
+
+        else if(strcmp(argv[i], "--cardinality") == 0){
+            if(argc - 2 < i){
+                fputs("ERROR: cardinality specified but none present.\n", stderr);
+                return NULL;
+            }
+            else sscanf(argv[++i], "%lu", &cardinality);            // strtoll, anyone?
+        }
+        
+        else if(strcmp(argv[i], "-j") == 0){
+            if(argc - 2 < i){
+                fputs("ERROR: increment specified but none present.\n", stderr);
+                return NULL;
+            }
+            else sscanf(argv[++i], "%u", &increment);
+        }
     }
 
-    if(dstPath == NULL)
-        dstPath = "out.c";
-
-    vfasttables_ctx* const restrict ctx = vfasttables_ctx_init(NULL, srcPath, dstPath, pfix, enumname, opts);
+    vfasttables_ctx* const restrict ctx = vfasttables_ctx_init(NULL, srcPath, pfix, enumname, cardinality, increment, opts);
     return ctx;
 }
 
@@ -73,6 +79,17 @@ static struct vfasttables_parseinput_s vfasttables_parseinput(vfasttables_ctx* c
     size_t  incnt = 0;
 
     while(!feof(ctx->src)){
+    // not the cleanest way of handling comments but who cares.
+        const bool iscomment = fgetc(ctx->src) == '#';
+        if(iscomment){
+            char r;
+            do{
+                r = fgetc(ctx->src);
+            } while(r != '\n' && r != EOF);
+            continue;
+        } 
+        else fseek(ctx->src, -1, SEEK_CUR);
+
         const size_t inpos = incnt++;
         instr = realloc(instr, incnt*sizeof(*instr));
         intok = realloc(intok, incnt*sizeof(*intok));
@@ -100,20 +117,22 @@ static struct vfasttables_parseinput_s vfasttables_parseinput(vfasttables_ctx* c
         fread(intok[inpos], sizeof(char), toklen, ctx->src);
         intok[inpos][toklen] = '\0';
         fseek(ctx->src, 1, SEEK_CUR);
-#ifdef VFASTTABLES_DEBUG
-        printf("%lu %s %lu %s\n", inlen[inpos], instr[inpos], toklen, intok[inpos]);
+#if defined(VFASTTABLES_DEBUG__PARSE) || defined(VFASTTABLES_DEBUG)
+        fprintf(stderr, "%lu %s %lu %s\n", inlen[inpos], instr[inpos], toklen, intok[inpos]);
 #endif
     }
 
     fclose(ctx->src);
     ctx->src = NULL;
+    
+    const size_t cardinality = ctx->cardinality > incnt? ctx->cardinality: incnt;
 // like functional languages? get ready for a whole lot of this!
 // tbf it doesn't even look that ugly & it's perfectly readable.
 // perhaps the 'default' or 'conditionless' value could be specified with a noop 'default' keyword.
     const uint32_t mask =
-        incnt <= 256?   255:
-        incnt <= 65536? 65535:
+        cardinality <= 256?   255:
+        cardinality <= 65536? 65535:
                         UINT32_MAX;
 
-    return (struct vfasttables_parseinput_s){instr, intok, inlen, incnt, mask};
+    return (struct vfasttables_parseinput_s){instr, intok, inlen, incnt, cardinality, ctx->increment, mask};
 }
