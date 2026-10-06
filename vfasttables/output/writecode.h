@@ -70,7 +70,7 @@ void vfasttables_out_printhash(uint32_t* const restrict associated_values, const
         "    };\n"
         "    %s hash = associated_values[len];\n"
         "    for(size_t i = 0; i < sizeof(indices)/sizeof(*indices); i++){\n"
-        "        hash += str[associated_values[indices[i]] %% len];\n"
+        "        hash += associated_values[str[indices[i] %% len]];\n"
         "    }\n"
         "    hash %%= %lu;\n"
         "    return hash;\n"
