@@ -110,7 +110,7 @@ void vfasttables_out_printsearch(char* const restrict pfix, char* const restrict
     vfasttables_out_printtable(s);
 
     fprintf(stdout,
-        "    return strncmp(table[index], str, len) == 0? index: %s_NONE;\n"
+        "    return table[index] && strncmp(table[index], str, len) == 0? index: %s_NONE;\n"
         "}\n",
         pfix
     );
