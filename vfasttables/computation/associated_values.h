@@ -133,12 +133,12 @@ static uint32_t* vfasttables_associated_values(size_t* const restrict indices, c
     unsigned int* const restrict frequency = vfasttables_associated_values__frequency(indices, indexcnt, s);
     vfasttables_associated_values__random_permute(s);     // found to help.
 
-    for(size_t i = 1; i < s->incnt; i++){
+    for(size_t i = 1; i <= s->incnt; i++){
         if(!vfasttables_associated_values__n(i, indices, indexcnt, associated_values, table, frequency, s)){
             fprintf(stderr, "ERROR: could not compute associated values array at entry %lu due to string %s.\n", i, s->instr[i]);
             break;
         }
-        else if(i == s->incnt - 1){                       // full assignment of all values to perfect hash has been found.
+        else if(i == s->incnt){                           // full assignment of all values to perfect hash has been found.
             free(frequency);
             free(table);
             return associated_values;
